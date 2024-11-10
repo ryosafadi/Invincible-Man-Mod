@@ -4,7 +4,9 @@ description = `
 [Tap]
  Turn
 [Hold]
- Walk outward
+ Walk Outward
+[Cursor]
+ Follow
 `;
 
 characters = [
@@ -46,7 +48,7 @@ options = {
   theme: "dark",
   isPlayingBgm: true,
   isReplayEnabled: true,
-  seed: 2,
+  seed: 6,
 };
 
 let player;
@@ -62,7 +64,7 @@ function update() {
     player = { pos: vec(50, 40), va: -1, ticks: 0 };
     humans = times(10, () => ({
       pos: vec(rnd(40, 60), rnd(40, 60)),
-      targetPos: vec(rnd(40, 60), rnd(40, 60)),
+      targetPos: vec(input.pos.x + rnds(30), input.pos.y + rnds(30)),
       vel: vec(),
       ticks: rnd(60),
     }));
@@ -115,7 +117,7 @@ function update() {
       p.div(humans.length + 1);
       humans.push({
         pos: p,
-        targetPos: vec(rnd(40, 60), rnd(40, 60)),
+        targetPos: vec(input.pos.x + rnds(30), input.pos.y + rnds(30)),
         vel: vec(),
         ticks: rnd(60),
       });
@@ -124,24 +126,28 @@ function update() {
   }
   color("black");
   remove(humans, (h) => {
-    let ta;
-    if (enemies.length > 0) {
-      const ne = getNearestActor(enemies, h.pos);
-      if (ne.pos.distanceTo(h.pos) < 25) {
-        ta = ne.pos.angleTo(h.pos);
+    // Update the target position to be near the cursor
+    h.targetPos.set(input.pos.x + rnds(30), input.pos.y + rnds(30));
+    let ta = h.pos.angleTo(h.targetPos);
+
+    // Apply a force towards the target position
+    h.vel.addWithAngle(ta, 0.015);
+
+    // Apply separation force to spread humans apart
+    humans.forEach((other) => {
+      if (other !== h && h.pos.distanceTo(other.pos) < 2) {
+        const separationAngle = h.pos.angleTo(other.pos) + PI;
+        h.vel.addWithAngle(separationAngle, 0.02);
       }
-    }
-    if (ta == null) {
-      if (h.pos.distanceTo(h.targetPos) < 1) {
-        h.targetPos.set(rnd(40, 60), rnd(40, 60));
-      }
-      ta = h.pos.angleTo(h.targetPos);
-    }
-    h.vel.addWithAngle(ta, 0.01);
-    h.vel.mul(0.9);
+    });
+
+    // Dampen velocity and update position
+    h.vel.mul(0.95);
     let px = h.pos.x;
     h.pos.add(vec(h.vel).mul(sd));
     h.pos.clamp(10, 90, 10, 90);
+
+    // Update animation and handle collisions
     h.ticks += sd;
     const c = char(addWithCharCode("a", floor(h.ticks / 30) % 2), h.pos, {
       mirror: { x: h.pos.x > px ? 1 : -1 },
