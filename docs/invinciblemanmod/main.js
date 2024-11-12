@@ -160,16 +160,20 @@ function update() {
   });
   nextEnemyTicks -= sd;
   if (nextEnemyTicks < 0) {
-    const ep = vec(50, 50).addWithAngle(rnd(PI * 2), 80);
-    const ec = rndi(3, 9);
-    times(ec, () => {
-      enemies.push({
-        pos: vec(ep).add(rnds(9), rnds(9)),
-        vel: vec(rnds(1 / sd), rnds(1 / sd)),
-        ticks: rnd(60),
+    if (humans.length > 0) {
+      const nearestHuman = getNearestActor(humans, vec(50, 50));
+      const spawnAngle = vec(50, 50).angleTo(nearestHuman.pos);
+      const ep = vec(50, 50).addWithAngle(spawnAngle, 80);
+      const ec = rndi(3, 9);
+      times(ec, () => {
+        enemies.push({
+          pos: vec(ep).add(rnds(9), rnds(9)),
+          vel: vec(rnds(1 / sd), rnds(1 / sd)),
+          ticks: rnd(60),
+        });
       });
-    });
-    nextEnemyTicks = rnd(70, 99) * sqrt(ec);
+      nextEnemyTicks = rnd(70, 99) * sqrt(ec);
+    }
   }
   color("red");
   remove(enemies, (e) => {
@@ -191,10 +195,11 @@ function update() {
         radius: 1,
         rv: 1,
       });
-      addScore(multiplier, e.pos);
+      addScore(multiplier, e.pos); // Add points when an enemy is hit
       multiplier++;
       return true;
     }
+    return false;
   });
   if (explosions.length === 0) {
     multiplier = 1;
